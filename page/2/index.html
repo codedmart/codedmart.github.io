@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Brandon Martin</title>
+    <link href="/style/style.css" rel="stylesheet" type="text/css" />
+    <link href="/favicon.png" rel="icon" type="image/png" />
+    <link href="/feed.xml" rel="alternate" type="application/atom+xml" />
+    <meta charset="utf-8">
+    <meta name="author" content="Brandon Martin" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <body>
+    <header>
+      <h1>Brandon Martin</h1>
+    </header>
+    <nav>
+      <ul>
+        <li><a href="/">Blog</a></li>
+        <li><a href="/archive">Archive</a></li>
+        <li><a href="https://github.com/codedmart"><span id="github">Code</span></a>
+        <li id="contact"><a href="mailto:brandon@codedmart.com" rel="author">Contact</a></li>
+      </ul>
+    </nav>
+
+    
+    <article itemscope>
+      <time datetime="2012-01-09" itemprop="datePublished"> 9 January, 2012</time>
+      <h1><a href="/2010/01/08/mongodb-and-mongomapper-greatness">MongoDB And MongoMapper Greatness</a></h1>
+      
+      <p>I was so excited to get a blog up and running and I haven’t even posted on it yet. So here goes nothing. I have been reading about document-oriented databases for a little while, but never really dug into it too far. It just so happens that <a href="http://railscasts.com/" title="Railscasts">Railscasts</a> did a segment on <a href="http://mongodb.org/" title="MongoDB">MongoDB</a> and <a href="http://github.com/jnunemaker/mongomapper/" title="MongoMapper">MongoMapper</a> so this was the perfect time to look into it a little more. I must say that John Nunemaker and anyone else that has worked on MongoMapper is doing a great job because it was pretty easy for me to convert our very own zyphmartin.com site over from PostgreSQL to MongoDB. Keep in mind that I do not consider myself a SQL guru to begin with so I am quite excited and impressed with MongoDB and MongoMapper.</p>
+<p>Setting up the connection was very straight forward just as the Railscast shows:</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="co"># initializers/mongo_config.rb</span>
+<span class="co"># Set Logger</span>
+<span class="dt">MongoMapper</span>.connection = <span class="dt">Mongo</span>::<span class="dt">Connection</span>.new(<span class="st">'localhost'</span>, <span class="dv">27017</span>, <span class="st">:logger</span> =&gt; <span class="dt">Rails</span>.logger)
+ 
+<span class="co"># Database</span>
+<span class="dt">MongoMapper</span>.database = <span class="st">&quot;zm-</span><span class="ot">#{</span><span class="dt">Rails</span>.env<span class="ot">}</span><span class="st">&quot;</span>
+
+<span class="co"># Authentication</span>
+<span class="dt">MongoMapper</span>.database.authenticate(<span class="st">'user'</span>, <span class="st">'password'</span>)</code></pre>
+<p>That is it to get up and running and you technically don’t need to set the logger or authentication to get a base minimum setup going. I ended up setting the logger originally because I was using a modified version of <a href="http://github.com/thoughtbot/paperclip/" title="Paperclip">Paperclip</a> but I ended up switching to <a href="http://github.com/jnicklas/carrierwave/" title="Carrierwave">Carrierwave</a> since it works out of the box with MongoMapper. Another reason I choose Carrierwave was because I am able to save to file as I did with Paperclip or I can save to Mongo’s GridFS.</p>
+<p>I also opted out of <a href="http://freelancing-god.github.com/ts/en/" title="Thinking Sphinx">Thinking Sphinx</a> which is what I was using for the search on the site but I thought that is was a little heavy for what we needed so I went to a simple mongo query. I will be adding more blog posts about MongoMapper down the road. Most everything else worked fine without much change. Here is a list of some great articles and places that I found the info that I needed.</p>
+<p><a href="http://www.mongodb.org/" title="MongoDB">MongoDB Site</a><br /> <a href="http://github.com/jnunemaker/mongomapper/" title="MongoMapper Github">MongoMapper Github</a><br /> <a href="http://railstips.org/" title="RailsTips">RailsTips</a> - John Nunemaker tips blog<br /> <a href="http://railscasts.com/episodes/194-mongodb-and-mongomapper/" title="Railscasts">Railscasts</a> - Episode 194<br /> <a href="http://www.2dconcept.com/articles/12-ruby_on_rails_mongo_mapper/" title="Anthony Heukmes">Anthony Heukmes</a> - Blog<br /> <a href="http://www.viget.com/extend/getting-started-with-mongodb-mongomapper/" title="Viget Extended">Viget Extended</a> - Blog<br /> #mongomapper irc.freenode.net - MongoMapper IRC</p>
+      
+    </article>
+    
+    <section>
+      <ul>
+        
+        <li class="next-page"><a href="/" rel="next">Newer posts</a></li>
+      </ul>
+    </section>
+    <footer>
+      <span><a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/">Copyleft</a> 2014 Brandon Martin</span> ·
+      <span>Powered by <a href="http://jaspervdj.be/hakyll">Hakyll</a></span> ·
+      <!--<span><a href="https://github.com/ruud-v-a/ruudvanasseldonk.com">SourceVd</a></span>-->
+    </footer>
+  </body>
+</html>
+

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Simple Auth Token Example With Devise</title>
+    <link href="/style/style.css" rel="stylesheet" type="text/css" />
+    <link href="/favicon.png" rel="icon" type="image/png" />
+    <link href="/feed.xml" rel="alternate" type="application/atom+xml" />
+    <meta charset="utf-8">
+    <meta name="author" content="Brandon Martin" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <body>
+    <header>
+      <h1>Brandon Martin</h1>
+    </header>
+    <nav>
+      <ul>
+        <li><a href="/">Blog</a></li>
+        <li><a href="/archive">Archive</a></li>
+        <li><a href="https://github.com/codedmart"><span id="github">Code</span></a>
+        <li id="contact"><a href="mailto:brandon@codedmart.com" rel="author">Contact</a></li>
+      </ul>
+    </nav>
+
+    <article itemscope>
+      <time datetime="2012-01-10" itemprop="datePublished">10 January, 2012</time>
+      <h1>Simple Auth Token Example With Devise</h1>
+      <p>Just trying to play catch up on a number of things. I haven’t posted anything in quite a while so I thought I would post something I have been seeing asked a lot on the devise mailing list, how to use :token_authenicatable. I thought I would put up a simple example of how some of the features work. Keep in mind that :token_authenticatable strategy in devise is a set of helper methods to generate and remove tokens, and it also has some callbacks you can use. That’s it, from there you need to handle how you want to deal with the tokens. If you have not read the :token_authenticatable model in the source code I recommend that you do it is documented very well <a href="https://github.com/plataformatec/devise/blob/master/lib/devise/models/token_authenticatable.rb" title="devise :token_authenticatable">devise :token_authenticatable.rb</a>. I added all this to the previous application that I posted on github.</p>
+<p>So assuming that you have a basic user application setup this is all I did. I created a token_authentications_controller.rb so I could allow users to generate and delete the token.</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="co"># token_authentications_controller.rb</span>
+<span class="kw">class</span> <span class="dt">TokenAuthenticationsController</span> &lt; <span class="dt">ApplicationController</span> 
+
+  <span class="kw">def</span> create
+    <span class="ot">@user</span> = <span class="dt">User</span>.criteria.id(params[<span class="st">:user_id</span>]).first
+    <span class="ot">@user</span>.reset_authentication_token!
+    redirect_to edit_user_registration_path(<span class="ot">@user</span>)
+  <span class="kw">end</span>
+
+  <span class="kw">def</span> destroy
+    <span class="ot">@user</span> = <span class="dt">User</span>.criteria.id(params[<span class="st">:id</span>]).first
+    <span class="ot">@user</span>.authentication_token = <span class="dv">nil</span>
+    <span class="ot">@user</span>.save
+    redirect_to edit_user_registration_path(<span class="ot">@user</span>)
+  <span class="kw">end</span>
+
+<span class="kw">end</span></code></pre>
+<p>Add the proper routes to routes.rb</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="co"># routes.rb</span>
+resources <span class="st">:token_authentications</span>, <span class="st">:only</span> =&gt; [<span class="st">:create</span>, <span class="st">:destroy</span>]</code></pre>
+<p>also make sure that you have added the :token_authenticatable strategy in you model and set the config.token_authentication_key in your devise initializer</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="co"># user.rb</span>
+devise <span class="st">:database_authenticatable</span>, <span class="st">:registerable</span>, <span class="st">:recoverable</span>, <span class="st">:rememberable</span>, <span class="st">:trackable</span>, <span class="st">:validatable</span>, <span class="st">:token_authenticatable</span></code></pre>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="co"># devise.rb</span>
+config.token_authentication_key = <span class="st">:auth_token</span></code></pre>
+<p>So now that we have all that I just added some simple links in the registrations/edit.html.erb view so the user could generate and delete the tokens themselves.</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="co"># registrations/edit.html.erb</span>
+&lt;p&gt;&lt;%= f.label <span class="st">:token_authentication_key</span> %&gt;&lt;br <span class="ot">/&gt;</span>
+<span class="ot">&lt;%= resource.authentication_token.blank? ? &quot;Token Empty&quot; : resource.authentication_token %&gt;&lt;/</span>p&gt;
+
+&lt;p&gt;&lt;%= link_to <span class="st">&quot;Generate Token&quot;</span>, token_authentications_path(<span class="st">:user_id</span> =&gt; resource.id), <span class="st">:method</span> =&gt; <span class="st">:post</span>, <span class="st">:confirm</span> =&gt; <span class="st">&quot;Are you sure?&quot;</span>  %&gt;
+&lt;%= link_to <span class="st">&quot;Delete Token&quot;</span>, token_authentication_path(resource), <span class="st">:method</span> =&gt; <span class="st">:delete</span>, <span class="st">:confirm</span> =&gt; <span class="st">&quot;Are you sure?&quot;</span>  %&gt;&lt;<span class="ot">/p&gt;</span>
+
+<span class="ot">&lt;% if resource.authentication_token %&gt;</span>
+<span class="ot">  &lt;p&gt;You can use this url to login&lt;br /</span>&gt;
+  &lt;%= link_to <span class="st">&quot;http://localhost:3000</span><span class="ot">#{</span>root_path(<span class="st">:auth_token</span> =&gt; resource.authentication_token)<span class="ot">}</span><span class="st">&quot;</span>, root_path(<span class="st">:auth_token</span> =&gt; resource.authentication_token)  %&gt;&lt;<span class="ot">/p&gt;</span>
+<span class="ot">&lt;% end %&gt;</span></code></pre>
+<p>Now a user can login with token authentication. Feel free to clone the repo and play around with it. Again this is a very basic look at a couple of the methods devise offers. If you have any questions or thoughts to add please feel free to leave a comment.</p>
+<p>On another note. I also extended to registrations controller so when a user signs up they are automatically given the role of user instead of nil.</p>
+    </article>
+    <section>
+      <ul>
+        <li class="previous-page"><a href="/2010/08/31/rails-3-mongoid-and-state-machine" title="Previous post: Rails 3, Mongoid, And State Machine" rel="prev">Rails 3, Mongoid, And State Machine</a></li>
+        <li class="next-page"><a href="/2014/11/19/hakyll-site" title="Next post: Hakyll Site" rel="next">Hakyll Site</a></li>
+      </ul>
+    </section>
+    <footer>
+      <span><a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/">Copyleft</a> 2014 Brandon Martin</span> ·
+      <span>Powered by <a href="http://jaspervdj.be/hakyll">Hakyll</a></span> ·
+      <!--<span><a href="https://github.com/ruud-v-a/ruudvanasseldonk.com">SourceVd</a></span>-->
+    </footer>
+  </body>
+</html>
+

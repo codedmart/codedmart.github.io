@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <title>Brandon Martin</title>
+    <link href="http://codedmart.com//feed.xml" rel="self" />
+    <link href="http://codedmart.com/" />
+    <id>http://codedmart.com//feed.xml</id>
+    <author>
+        <name>Brandon Martin</name>
+        <email>brandon@codedmart.com</email>
+    </author>
+    <updated>2014-11-19T00:00:00Z</updated>
+    <entry>
+    <title>Hakyll Site</title>
+    <link href="http://codedmart.com//2014/11/19/hakyll-site/index.html" />
+    <id>http://codedmart.com//2014/11/19/hakyll-site/index.html</id>
+    <published>2014-11-19T00:00:00Z</published>
+    <updated>2014-11-19T00:00:00Z</updated>
+    <summary type="html"><![CDATA[<p>WIP, trying to get a hakyll site going. I have been meaning to for a while, but never got around to it. For this site I just borrowed the source from <a href="http://ruudvanasseldonk.com">Ruud van Asseldonk</a> and just slightly modified the theme for now. I plan on adding some pages, change the theme style a little more, and using this as my place to talk about all things programming.</p>]]></summary>
+</entry>
+<entry>
+    <title>Simple Auth Token Example With Devise</title>
+    <link href="http://codedmart.com//2010/12/20/simple-auth-token-example-with-devise/index.html" />
+    <id>http://codedmart.com//2010/12/20/simple-auth-token-example-with-devise/index.html</id>
+    <published>2012-01-10T00:00:00Z</published>
+    <updated>2012-01-10T00:00:00Z</updated>
+    <summary type="html"><![CDATA[<p>Just trying to play catch up on a number of things. I haven’t posted anything in quite a while so I thought I would post something I have been seeing asked a lot on the devise mailing list, how to use :token_authenicatable. I thought I would put up a simple example of how some of the features work. Keep in mind that :token_authenticatable strategy in devise is a set of helper methods to generate and remove tokens, and it also has some callbacks you can use. That’s it, from there you need to handle how you want to deal with the tokens. If you have not read the :token_authenticatable model in the source code I recommend that you do it is documented very well <a href="https://github.com/plataformatec/devise/blob/master/lib/devise/models/token_authenticatable.rb" title="devise :token_authenticatable">devise :token_authenticatable.rb</a>. I added all this to the previous application that I posted on github.</p>
+<p>So assuming that you have a basic user application setup this is all I did. I created a token_authentications_controller.rb so I could allow users to generate and delete the token.</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="co"># token_authentications_controller.rb</span>
+<span class="kw">class</span> <span class="dt">TokenAuthenticationsController</span> &lt; <span class="dt">ApplicationController</span> 
+
+  <span class="kw">def</span> create
+    <span class="ot">@user</span> = <span class="dt">User</span>.criteria.id(params[<span class="st">:user_id</span>]).first
+    <span class="ot">@user</span>.reset_authentication_token!
+    redirect_to edit_user_registration_path(<span class="ot">@user</span>)
+  <span class="kw">end</span>
+
+  <span class="kw">def</span> destroy
+    <span class="ot">@user</span> = <span class="dt">User</span>.criteria.id(params[<span class="st">:id</span>]).first
+    <span class="ot">@user</span>.authentication_token = <span class="dv">nil</span>
+    <span class="ot">@user</span>.save
+    redirect_to edit_user_registration_path(<span class="ot">@user</span>)
+  <span class="kw">end</span>
+
+<span class="kw">end</span></code></pre>
+<p>Add the proper routes to routes.rb</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="co"># routes.rb</span>
+resources <span class="st">:token_authentications</span>, <span class="st">:only</span> =&gt; [<span class="st">:create</span>, <span class="st">:destroy</span>]</code></pre>
+<p>also make sure that you have added the :token_authenticatable strategy in you model and set the config.token_authentication_key in your devise initializer</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="co"># user.rb</span>
+devise <span class="st">:database_authenticatable</span>, <span class="st">:registerable</span>, <span class="st">:recoverable</span>, <span class="st">:rememberable</span>, <span class="st">:trackable</span>, <span class="st">:validatable</span>, <span class="st">:token_authenticatable</span></code></pre>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="co"># devise.rb</span>
+config.token_authentication_key = <span class="st">:auth_token</span></code></pre>
+<p>So now that we have all that I just added some simple links in the registrations/edit.html.erb view so the user could generate and delete the tokens themselves.</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="co"># registrations/edit.html.erb</span>
+&lt;p&gt;&lt;%= f.label <span class="st">:token_authentication_key</span> %&gt;&lt;br <span class="ot">/&gt;</span>
+<span class="ot">&lt;%= resource.authentication_token.blank? ? &quot;Token Empty&quot; : resource.authentication_token %&gt;&lt;/</span>p&gt;
+
+&lt;p&gt;&lt;%= link_to <span class="st">&quot;Generate Token&quot;</span>, token_authentications_path(<span class="st">:user_id</span> =&gt; resource.id), <span class="st">:method</span> =&gt; <span class="st">:post</span>, <span class="st">:confirm</span> =&gt; <span class="st">&quot;Are you sure?&quot;</span>  %&gt;
+&lt;%= link_to <span class="st">&quot;Delete Token&quot;</span>, token_authentication_path(resource), <span class="st">:method</span> =&gt; <span class="st">:delete</span>, <span class="st">:confirm</span> =&gt; <span class="st">&quot;Are you sure?&quot;</span>  %&gt;&lt;<span class="ot">/p&gt;</span>
+
+<span class="ot">&lt;% if resource.authentication_token %&gt;</span>
+<span class="ot">  &lt;p&gt;You can use this url to login&lt;br /</span>&gt;
+  &lt;%= link_to <span class="st">&quot;http://localhost:3000</span><span class="ot">#{</span>root_path(<span class="st">:auth_token</span> =&gt; resource.authentication_token)<span class="ot">}</span><span class="st">&quot;</span>, root_path(<span class="st">:auth_token</span> =&gt; resource.authentication_token)  %&gt;&lt;<span class="ot">/p&gt;</span>
+<span class="ot">&lt;% end %&gt;</span></code></pre>
+<p>Now a user can login with token authentication. Feel free to clone the repo and play around with it. Again this is a very basic look at a couple of the methods devise offers. If you have any questions or thoughts to add please feel free to leave a comment.</p>
+<p>On another note. I also extended to registrations controller so when a user signs up they are automatically given the role of user instead of nil.</p>]]></summary>
+</entry>
+<entry>
+    <title>Rails 3, Mongoid, And State Machine</title>
+    <link href="http://codedmart.com//2010/08/31/rails-3-mongoid-and-state-machine/index.html" />
+    <id>http://codedmart.com//2010/08/31/rails-3-mongoid-and-state-machine/index.html</id>
+    <published>2012-01-10T00:00:00Z</published>
+    <updated>2012-01-10T00:00:00Z</updated>
+    <summary type="html"><![CDATA[<p>[UPDATE] Ryan the author of stateflow has updated the library to work with Rails 2.3.x and Rails 3 you no longer need to modify anything to get it working with Rails 3. [/UPDATE]</p>
+<p>It is amazing that we have had a blog for about 9 months and I have only posted 1 blog post. I am going to try and make a point to change that and start posting some more about what I am working on, what goodies I am using, and anything that might be useful to someone else or myself later down the road. So Rails 3 is out and it is great. I upgraded our site to a release candidate of it a week or so ago and everything went well with that, but I will talk about that in another post. Along with upgrading our site to Rails 3 I also changed from MongoMapper to MongoID. I think that they are both great libraries, but there were some things that just flowed better for me personally with MongoID.</p>
+<p>Right now I am working on a project that I have a need for a state machine library. I googled and found <a href="http://github.com/ryanza/stateflow/" title="stateflow">stateflow</a>. Stateflow supports MongoID as a persistence layer. <del>I only needed to modify the persistence file for MongoID to adjust the callback for Rails 3 since the :before_validation_on_create has changed</del></p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="co"># [UPDATE] Removed because you know longer need to do modify anything.</span>
+<span class="co"># Ryan has updated the library. [/UPDATE]</span></code></pre>
+<p>So far in my small initial tests all seems to be working fine for me. I will post back if I run into anything that isn’t working for me.</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="dt">Stateflow</span>.persistence = <span class="st">:mongoid</span>
+
+<span class="kw">class</span> <span class="dt">Light</span>
+  include <span class="dt">Mongoid</span>::<span class="dt">Document</span>
+  include <span class="dt">Stateflow</span>
+  
+  field <span class="st">:state</span>
+  
+  stateflow <span class="kw">do</span>
+    state_column <span class="st">:state</span>
+    initial <span class="st">:green</span>
+    
+    state <span class="st">:green</span>
+    state <span class="st">:yellow</span> <span class="kw">do</span>
+      exit <span class="st">:catch_runners</span>
+    <span class="kw">end</span>
+    state <span class="st">:red</span>
+    
+    event <span class="st">:change_color</span> <span class="kw">do</span>
+      transitions <span class="st">:from</span> =&gt; <span class="st">:green</span>, <span class="st">:to</span> =&gt; <span class="st">:yellow</span>
+      transitions <span class="st">:from</span> =&gt; <span class="st">:yellow</span>, <span class="st">:to</span> =&gt; <span class="st">:red</span>
+      transitions <span class="st">:from</span> =&gt; <span class="st">:red</span>, <span class="st">:to</span> =&gt; <span class="st">:green</span>
+    <span class="kw">end</span>
+  <span class="kw">end</span>
+  
+  <span class="kw">def</span> catch_runners
+    puts <span class="st">&quot;That&#39;ll be $250.&quot;</span>
+  <span class="kw">end</span>
+  
+<span class="kw">end</span>
+
+light = <span class="dt">Light</span>.new
+light.current_state    <span class="co"># :green</span>
+light.change_color!    <span class="co"># true</span>
+light.current_state    <span class="co"># :yellow</span>
+light.change_color!    <span class="co"># true</span>
+<span class="st">&quot;That&#39;ll be $250.&quot;</span>
+light.current_state    <span class="co"># :red</span></code></pre>]]></summary>
+</entry>
+<entry>
+    <title>Manage Users With Devise And CanCan</title>
+    <link href="http://codedmart.com//2010/10/03/manage-users-with-devise-and-cancan/index.html" />
+    <id>http://codedmart.com//2010/10/03/manage-users-with-devise-and-cancan/index.html</id>
+    <published>2012-01-10T00:00:00Z</published>
+    <updated>2012-01-10T00:00:00Z</updated>
+    <summary type="html"><![CDATA[<p>So I have been using Devise for all my rails projects that need authentication. I really enjoy working with devise. It has so many awesome features but it is really extendable when needed. One thing that I have been seeing on the mailing list for devise over and over is how an admin role can manage users. I know there is some stuff on the devise wiki about this but I thought why not add some more info and put an example app up on github. There are a few ways that you can achieve this and this is just the way I do it. If there are errors let me know and I will fix them. This is provided with no tests and is only to serve as an example. The github app is at <a href="http://github.com/codedmart/devise-roles-user-management" class="uri" title="http://github.com/codedmart/devise-roles-user-management">http://github.com/codedmart/devise-roles-user-management</a>. This example app is based on devise 1.1.3, cancan 0.4.1, and uses mongoid. I will just post the main code snippets and if you have any questions or suggestions feel free to leave comments.</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="co"># routes.rb</span>
+<span class="dt">DeviseRolesUserManagement</span>::<span class="dt">Application</span>.routes.draw <span class="kw">do</span>
+  devise_for <span class="st">:users</span>
+  devise_scope <span class="st">:user</span> <span class="kw">do</span>
+    get <span class="st">&#39;/login&#39;</span> =&gt; <span class="st">&#39;devise/sessions#new&#39;</span>
+    get <span class="st">&#39;/logout&#39;</span> =&gt; <span class="st">&#39;devise/sessions#destroy&#39;</span>
+  <span class="kw">end</span>
+  resources <span class="st">:user</span>, <span class="st">:controller</span> =&gt; <span class="st">&quot;user&quot;</span>
+  root <span class="st">:to</span> =&gt; <span class="st">&quot;dashboard#index&quot;</span>
+<span class="kw">end</span></code></pre>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="co"># user_controller.rb</span>
+<span class="kw">class</span> <span class="dt">UserController</span> &lt; <span class="dt">ApplicationController</span>
+  load_and_authorize_resource
+  
+  <span class="kw">def</span> index
+    <span class="ot">@users</span> = <span class="dt">User</span>.excludes(<span class="st">:id</span> =&gt; current_user.id)
+  <span class="kw">end</span>
+  
+  <span class="kw">def</span> new
+    <span class="ot">@user</span> = <span class="dt">User</span>.new
+  <span class="kw">end</span>
+  
+  <span class="kw">def</span> create
+    <span class="ot">@user</span> = <span class="dt">User</span>.new(params[<span class="st">:user</span>])
+    <span class="kw">if</span> <span class="ot">@user</span>.save
+      flash[<span class="st">:notice</span>] = <span class="st">&quot;Successfully created User.&quot;</span> 
+      redirect_to root_path
+    <span class="kw">else</span>
+      render <span class="st">:action</span> =&gt; <span class="st">&#39;new&#39;</span>
+    <span class="kw">end</span>
+  <span class="kw">end</span>
+  
+  <span class="kw">def</span> edit
+    <span class="ot">@user</span> = <span class="dt">User</span>.find(params[<span class="st">:id</span>])
+  <span class="kw">end</span>
+  
+  <span class="kw">def</span> update
+    <span class="ot">@user</span> = <span class="dt">User</span>.find(params[<span class="st">:id</span>])
+    params[<span class="st">:user</span>].delete(<span class="st">:password</span>) <span class="kw">if</span> params[<span class="st">:user</span>][<span class="st">:password</span>].blank?
+    params[<span class="st">:user</span>].delete(<span class="st">:password_confirmation</span>) <span class="kw">if</span> params[<span class="st">:user</span>][<span class="st">:password</span>].blank? <span class="kw">and</span> params[<span class="st">:user</span>][<span class="st">:password_confirmation</span>].blank?
+    <span class="kw">if</span> <span class="ot">@user</span>.update_attributes(params[<span class="st">:user</span>])
+      flash[<span class="st">:notice</span>] = <span class="st">&quot;Successfully updated User.&quot;</span>
+      redirect_to root_path
+    <span class="kw">else</span>
+      render <span class="st">:action</span> =&gt; <span class="st">&#39;edit&#39;</span>
+    <span class="kw">end</span>
+  <span class="kw">end</span>
+  
+  <span class="kw">def</span> destroy
+    <span class="ot">@user</span> = <span class="dt">User</span>.find(params[<span class="st">:id</span>])
+    <span class="kw">if</span> <span class="ot">@user</span>.destroy
+      flash[<span class="st">:notice</span>] = <span class="st">&quot;Successfully deleted User.&quot;</span>
+      redirect_to root_path
+    <span class="kw">end</span>
+  <span class="kw">end</span>
+  
+<span class="kw">end</span></code></pre>
+<p>The views provide the all the links for the Users with an admin role to add and manage Users. I just created a role field for user and use CanCan to take care of the authorizations.</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="co"># ability.rb</span>
+<span class="kw">class</span> <span class="dt">Ability</span>
+  include <span class="dt">CanCan</span>::<span class="dt">Ability</span>
+
+  <span class="kw">def</span> initialize(user)
+    can <span class="st">:manage</span>, <span class="st">:all</span> <span class="kw">if</span> user.role == <span class="st">&quot;admin&quot;</span>
+  <span class="kw">end</span>
+<span class="kw">end</span></code></pre>
+<p>And then I catch unauthorized requests and redirect to root_url with a flash message.</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="co"># application_controller.rb</span>
+<span class="kw">class</span> <span class="dt">ApplicationController</span> &lt; <span class="dt">ActionController</span>::<span class="dt">Base</span>
+  protect_from_forgery
+  rescue_from <span class="dt">CanCan</span>::<span class="dt">AccessDenied</span> <span class="kw">do</span> |exception|
+    flash[<span class="st">:error</span>] = exception.message
+    redirect_to root_url
+  <span class="kw">end</span>
+<span class="kw">end</span></code></pre>
+<p>There is a ton of great information on the devise wiki and the cancan wiki that can answer most of your questions.</p>]]></summary>
+</entry>
+<entry>
+    <title>jQuery Autocomplete And Mongoid</title>
+    <link href="http://codedmart.com//2010/09/09/jquery-autocomplete-and-mongoid/index.html" />
+    <id>http://codedmart.com//2010/09/09/jquery-autocomplete-and-mongoid/index.html</id>
+    <published>2012-01-10T00:00:00Z</published>
+    <updated>2012-01-10T00:00:00Z</updated>
+    <summary type="html"><![CDATA[<p>When I updated our site to rails 3 I was using the standard rails autocomplete with prototype. Since I wanted to switch to jquery I did a google serach and I found this gem for rails 3 and jquery <a href="http://rubygems.org/gems/rails3-jquery-autocomplete" title="rails3-jquery-autocomplete">rails3-jquery-autocomplete</a> but the syntax is different since I am using mongoid. So I modified it to work with mongoid changing the sql syntax to a mongo search syntax. Not sure if there is a big enough need to turn this into a gem and put it up on rubygems but you can find my fork on github if your interested in it <a href="http://github.com/zmbmartin/rails3-jquery-autocomplete" title="here">here</a>.</p>
+<p>The original method for the plugin looked like this…</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="kw">module</span> <span class="dt">ClassMethods</span>
+  <span class="kw">def</span> autocomplete(object, method, options = {})
+    limit = options[<span class="st">:limit</span>] || <span class="dv">10</span>
+    order = options[<span class="st">:order</span>] || <span class="st">&quot;</span><span class="ot">#{</span>method<span class="ot">}</span><span class="st"> ASC&quot;</span>
+
+    define_method(<span class="st">&quot;autocomplete_</span><span class="ot">#{</span>object<span class="ot">}</span><span class="st">_</span><span class="ot">#{</span>method<span class="ot">}</span><span class="st">&quot;</span>) <span class="kw">do</span>
+      <span class="kw">unless</span> params[<span class="st">:term</span>] &amp;&amp; params[<span class="st">:term</span>].empty?
+        items = object.to_s.camelize.constantize.where([<span class="st">&quot;LOWER(</span><span class="ot">#{</span>method<span class="ot">}</span><span class="st">) LIKE ?&quot;</span>, <span class="st">&quot;</span><span class="ot">#{</span>(options[<span class="st">:full</span>] ? <span class="st">&#39;%&#39;</span> : <span class="st">&#39;&#39;</span>)<span class="ot">}#{</span>params[<span class="st">:term</span>].downcase<span class="ot">}</span><span class="st">%&quot;</span>]).limit(limit).order(order)
+      <span class="kw">else</span>
+        items = {}
+      <span class="kw">end</span>
+
+    render <span class="st">:json</span> =&gt; json_for_autocomplete(items, (options[<span class="st">:display_value</span>] ? options[<span class="st">:display_value</span>] : method))
+  <span class="kw">end</span>
+<span class="kw">end</span>
+
+<span class="kw">def</span> json_for_autocomplete(items, method)
+  items.collect {|i| {<span class="st">&quot;id&quot;</span> =&gt; i.id, <span class="st">&quot;label&quot;</span> =&gt; i.send(method), <span class="st">&quot;value&quot;</span> =&gt; i.send(method)}}
+<span class="kw">end</span></code></pre>
+<p>I changed removed the limit and order since we can just do that through the chaining of criteria that mongoid provides and I also change the json_for_autocomplete…</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="kw">module</span> <span class="dt">ClassMethods</span>
+  <span class="kw">def</span> autocomplete(object, method, options = {})
+
+    define_method(<span class="st">&quot;autocomplete_</span><span class="ot">#{</span>object<span class="ot">}</span><span class="st">_</span><span class="ot">#{</span>method<span class="ot">}</span><span class="st">&quot;</span>) <span class="kw">do</span>
+      <span class="kw">unless</span> params[<span class="st">:term</span>] &amp;&amp; params[<span class="st">:term</span>].empty?
+        items = <span class="dt">Category</span>.where(<span class="st">&quot;this.name.match(/</span><span class="ot">#{</span>params[<span class="st">:term</span>]<span class="ot">}</span><span class="st">/i)&quot;</span>).limit(<span class="dv">10</span>).asc(method)
+      <span class="kw">else</span>
+        items = {}
+      <span class="kw">end</span>
+
+    render <span class="st">:json</span> =&gt; json_for_autocomplete(items, method)
+  <span class="kw">end</span>
+<span class="kw">end</span>
+
+<span class="kw">def</span> json_for_autocomplete(items, method)
+  items.collect {|i| {<span class="st">&quot;id&quot;</span> =&gt; <span class="st">&quot;</span><span class="ot">#{</span>i.id<span class="ot">}</span><span class="st">&quot;</span>, <span class="st">&quot;label&quot;</span> =&gt; <span class="st">&quot;</span><span class="ot">#{</span>i.name<span class="ot">}</span><span class="st">&quot;</span>, <span class="st">&quot;value&quot;</span> =&gt; <span class="st">&quot;</span><span class="ot">#{</span>i.name<span class="ot">}</span><span class="st">&quot;</span>}}
+<span class="kw">end</span></code></pre>]]></summary>
+</entry>
+<entry>
+    <title>MongoDB And MongoMapper Greatness</title>
+    <link href="http://codedmart.com//2010/01/08/mongodb-and-mongomapper-greatness/index.html" />
+    <id>http://codedmart.com//2010/01/08/mongodb-and-mongomapper-greatness/index.html</id>
+    <published>2012-01-09T00:00:00Z</published>
+    <updated>2012-01-09T00:00:00Z</updated>
+    <summary type="html"><![CDATA[<p>I was so excited to get a blog up and running and I haven’t even posted on it yet. So here goes nothing. I have been reading about document-oriented databases for a little while, but never really dug into it too far. It just so happens that <a href="http://railscasts.com/" title="Railscasts">Railscasts</a> did a segment on <a href="http://mongodb.org/" title="MongoDB">MongoDB</a> and <a href="http://github.com/jnunemaker/mongomapper/" title="MongoMapper">MongoMapper</a> so this was the perfect time to look into it a little more. I must say that John Nunemaker and anyone else that has worked on MongoMapper is doing a great job because it was pretty easy for me to convert our very own zyphmartin.com site over from PostgreSQL to MongoDB. Keep in mind that I do not consider myself a SQL guru to begin with so I am quite excited and impressed with MongoDB and MongoMapper.</p>
+<p>Setting up the connection was very straight forward just as the Railscast shows:</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="co"># initializers/mongo_config.rb</span>
+<span class="co"># Set Logger</span>
+<span class="dt">MongoMapper</span>.connection = <span class="dt">Mongo</span>::<span class="dt">Connection</span>.new(<span class="st">&#39;localhost&#39;</span>, <span class="dv">27017</span>, <span class="st">:logger</span> =&gt; <span class="dt">Rails</span>.logger)
+ 
+<span class="co"># Database</span>
+<span class="dt">MongoMapper</span>.database = <span class="st">&quot;zm-</span><span class="ot">#{</span><span class="dt">Rails</span>.env<span class="ot">}</span><span class="st">&quot;</span>
+
+<span class="co"># Authentication</span>
+<span class="dt">MongoMapper</span>.database.authenticate(<span class="st">&#39;user&#39;</span>, <span class="st">&#39;password&#39;</span>)</code></pre>
+<p>That is it to get up and running and you technically don’t need to set the logger or authentication to get a base minimum setup going. I ended up setting the logger originally because I was using a modified version of <a href="http://github.com/thoughtbot/paperclip/" title="Paperclip">Paperclip</a> but I ended up switching to <a href="http://github.com/jnicklas/carrierwave/" title="Carrierwave">Carrierwave</a> since it works out of the box with MongoMapper. Another reason I choose Carrierwave was because I am able to save to file as I did with Paperclip or I can save to Mongo’s GridFS.</p>
+<p>I also opted out of <a href="http://freelancing-god.github.com/ts/en/" title="Thinking Sphinx">Thinking Sphinx</a> which is what I was using for the search on the site but I thought that is was a little heavy for what we needed so I went to a simple mongo query. I will be adding more blog posts about MongoMapper down the road. Most everything else worked fine without much change. Here is a list of some great articles and places that I found the info that I needed.</p>
+<p><a href="http://www.mongodb.org/" title="MongoDB">MongoDB Site</a><br /> <a href="http://github.com/jnunemaker/mongomapper/" title="MongoMapper Github">MongoMapper Github</a><br /> <a href="http://railstips.org/" title="RailsTips">RailsTips</a> - John Nunemaker tips blog<br /> <a href="http://railscasts.com/episodes/194-mongodb-and-mongomapper/" title="Railscasts">Railscasts</a> - Episode 194<br /> <a href="http://www.2dconcept.com/articles/12-ruby_on_rails_mongo_mapper/" title="Anthony Heukmes">Anthony Heukmes</a> - Blog<br /> <a href="http://www.viget.com/extend/getting-started-with-mongodb-mongomapper/" title="Viget Extended">Viget Extended</a> - Blog<br /> #mongomapper irc.freenode.net - MongoMapper IRC</p>]]></summary>
+</entry>
+
+</feed>

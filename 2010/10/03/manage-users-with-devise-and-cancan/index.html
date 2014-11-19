@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Manage Users With Devise And CanCan</title>
+    <link href="/style/style.css" rel="stylesheet" type="text/css" />
+    <link href="/favicon.png" rel="icon" type="image/png" />
+    <link href="/feed.xml" rel="alternate" type="application/atom+xml" />
+    <meta charset="utf-8">
+    <meta name="author" content="Brandon Martin" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <body>
+    <header>
+      <h1>Brandon Martin</h1>
+    </header>
+    <nav>
+      <ul>
+        <li><a href="/">Blog</a></li>
+        <li><a href="/archive">Archive</a></li>
+        <li><a href="https://github.com/codedmart"><span id="github">Code</span></a>
+        <li id="contact"><a href="mailto:brandon@codedmart.com" rel="author">Contact</a></li>
+      </ul>
+    </nav>
+
+    <article itemscope>
+      <time datetime="2012-01-10" itemprop="datePublished">10 January, 2012</time>
+      <h1>Manage Users With Devise And CanCan</h1>
+      <p>So I have been using Devise for all my rails projects that need authentication. I really enjoy working with devise. It has so many awesome features but it is really extendable when needed. One thing that I have been seeing on the mailing list for devise over and over is how an admin role can manage users. I know there is some stuff on the devise wiki about this but I thought why not add some more info and put an example app up on github. There are a few ways that you can achieve this and this is just the way I do it. If there are errors let me know and I will fix them. This is provided with no tests and is only to serve as an example. The github app is at <a href="http://github.com/codedmart/devise-roles-user-management" class="uri" title="http://github.com/codedmart/devise-roles-user-management">http://github.com/codedmart/devise-roles-user-management</a>. This example app is based on devise 1.1.3, cancan 0.4.1, and uses mongoid. I will just post the main code snippets and if you have any questions or suggestions feel free to leave comments.</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="co"># routes.rb</span>
+<span class="dt">DeviseRolesUserManagement</span>::<span class="dt">Application</span>.routes.draw <span class="kw">do</span>
+  devise_for <span class="st">:users</span>
+  devise_scope <span class="st">:user</span> <span class="kw">do</span>
+    get <span class="st">'/login'</span> =&gt; <span class="st">'devise/sessions#new'</span>
+    get <span class="st">'/logout'</span> =&gt; <span class="st">'devise/sessions#destroy'</span>
+  <span class="kw">end</span>
+  resources <span class="st">:user</span>, <span class="st">:controller</span> =&gt; <span class="st">&quot;user&quot;</span>
+  root <span class="st">:to</span> =&gt; <span class="st">&quot;dashboard#index&quot;</span>
+<span class="kw">end</span></code></pre>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="co"># user_controller.rb</span>
+<span class="kw">class</span> <span class="dt">UserController</span> &lt; <span class="dt">ApplicationController</span>
+  load_and_authorize_resource
+  
+  <span class="kw">def</span> index
+    <span class="ot">@users</span> = <span class="dt">User</span>.excludes(<span class="st">:id</span> =&gt; current_user.id)
+  <span class="kw">end</span>
+  
+  <span class="kw">def</span> new
+    <span class="ot">@user</span> = <span class="dt">User</span>.new
+  <span class="kw">end</span>
+  
+  <span class="kw">def</span> create
+    <span class="ot">@user</span> = <span class="dt">User</span>.new(params[<span class="st">:user</span>])
+    <span class="kw">if</span> <span class="ot">@user</span>.save
+      flash[<span class="st">:notice</span>] = <span class="st">&quot;Successfully created User.&quot;</span> 
+      redirect_to root_path
+    <span class="kw">else</span>
+      render <span class="st">:action</span> =&gt; <span class="st">'new'</span>
+    <span class="kw">end</span>
+  <span class="kw">end</span>
+  
+  <span class="kw">def</span> edit
+    <span class="ot">@user</span> = <span class="dt">User</span>.find(params[<span class="st">:id</span>])
+  <span class="kw">end</span>
+  
+  <span class="kw">def</span> update
+    <span class="ot">@user</span> = <span class="dt">User</span>.find(params[<span class="st">:id</span>])
+    params[<span class="st">:user</span>].delete(<span class="st">:password</span>) <span class="kw">if</span> params[<span class="st">:user</span>][<span class="st">:password</span>].blank?
+    params[<span class="st">:user</span>].delete(<span class="st">:password_confirmation</span>) <span class="kw">if</span> params[<span class="st">:user</span>][<span class="st">:password</span>].blank? <span class="kw">and</span> params[<span class="st">:user</span>][<span class="st">:password_confirmation</span>].blank?
+    <span class="kw">if</span> <span class="ot">@user</span>.update_attributes(params[<span class="st">:user</span>])
+      flash[<span class="st">:notice</span>] = <span class="st">&quot;Successfully updated User.&quot;</span>
+      redirect_to root_path
+    <span class="kw">else</span>
+      render <span class="st">:action</span> =&gt; <span class="st">'edit'</span>
+    <span class="kw">end</span>
+  <span class="kw">end</span>
+  
+  <span class="kw">def</span> destroy
+    <span class="ot">@user</span> = <span class="dt">User</span>.find(params[<span class="st">:id</span>])
+    <span class="kw">if</span> <span class="ot">@user</span>.destroy
+      flash[<span class="st">:notice</span>] = <span class="st">&quot;Successfully deleted User.&quot;</span>
+      redirect_to root_path
+    <span class="kw">end</span>
+  <span class="kw">end</span>
+  
+<span class="kw">end</span></code></pre>
+<p>The views provide the all the links for the Users with an admin role to add and manage Users. I just created a role field for user and use CanCan to take care of the authorizations.</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="co"># ability.rb</span>
+<span class="kw">class</span> <span class="dt">Ability</span>
+  include <span class="dt">CanCan</span>::<span class="dt">Ability</span>
+
+  <span class="kw">def</span> initialize(user)
+    can <span class="st">:manage</span>, <span class="st">:all</span> <span class="kw">if</span> user.role == <span class="st">&quot;admin&quot;</span>
+  <span class="kw">end</span>
+<span class="kw">end</span></code></pre>
+<p>And then I catch unauthorized requests and redirect to root_url with a flash message.</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="co"># application_controller.rb</span>
+<span class="kw">class</span> <span class="dt">ApplicationController</span> &lt; <span class="dt">ActionController</span>::<span class="dt">Base</span>
+  protect_from_forgery
+  rescue_from <span class="dt">CanCan</span>::<span class="dt">AccessDenied</span> <span class="kw">do</span> |exception|
+    flash[<span class="st">:error</span>] = exception.message
+    redirect_to root_url
+  <span class="kw">end</span>
+<span class="kw">end</span></code></pre>
+<p>There is a ton of great information on the devise wiki and the cancan wiki that can answer most of your questions.</p>
+    </article>
+    <section>
+      <ul>
+        <li class="previous-page"><a href="/2010/09/09/jquery-autocomplete-and-mongoid" title="Previous post: jQuery Autocomplete And Mongoid" rel="prev">jQuery Autocomplete And Mongoid</a></li>
+        <li class="next-page"><a href="/2010/08/31/rails-3-mongoid-and-state-machine" title="Next post: Rails 3, Mongoid, And State Machine" rel="next">Rails 3, Mongoid, And State Machine</a></li>
+      </ul>
+    </section>
+    <footer>
+      <span><a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/">Copyleft</a> 2014 Brandon Martin</span> ·
+      <span>Powered by <a href="http://jaspervdj.be/hakyll">Hakyll</a></span> ·
+      <!--<span><a href="https://github.com/ruud-v-a/ruudvanasseldonk.com">SourceVd</a></span>-->
+    </footer>
+  </body>
+</html>
+

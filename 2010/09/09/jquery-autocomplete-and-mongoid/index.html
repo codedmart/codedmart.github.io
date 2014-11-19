@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>jQuery Autocomplete And Mongoid</title>
+    <link href="/style/style.css" rel="stylesheet" type="text/css" />
+    <link href="/favicon.png" rel="icon" type="image/png" />
+    <link href="/feed.xml" rel="alternate" type="application/atom+xml" />
+    <meta charset="utf-8">
+    <meta name="author" content="Brandon Martin" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <body>
+    <header>
+      <h1>Brandon Martin</h1>
+    </header>
+    <nav>
+      <ul>
+        <li><a href="/">Blog</a></li>
+        <li><a href="/archive">Archive</a></li>
+        <li><a href="https://github.com/codedmart"><span id="github">Code</span></a>
+        <li id="contact"><a href="mailto:brandon@codedmart.com" rel="author">Contact</a></li>
+      </ul>
+    </nav>
+
+    <article itemscope>
+      <time datetime="2012-01-10" itemprop="datePublished">10 January, 2012</time>
+      <h1>jQuery Autocomplete And Mongoid</h1>
+      <p>When I updated our site to rails 3 I was using the standard rails autocomplete with prototype. Since I wanted to switch to jquery I did a google serach and I found this gem for rails 3 and jquery <a href="http://rubygems.org/gems/rails3-jquery-autocomplete" title="rails3-jquery-autocomplete">rails3-jquery-autocomplete</a> but the syntax is different since I am using mongoid. So I modified it to work with mongoid changing the sql syntax to a mongo search syntax. Not sure if there is a big enough need to turn this into a gem and put it up on rubygems but you can find my fork on github if your interested in it <a href="http://github.com/zmbmartin/rails3-jquery-autocomplete" title="here">here</a>.</p>
+<p>The original method for the plugin looked like this…</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="kw">module</span> <span class="dt">ClassMethods</span>
+  <span class="kw">def</span> autocomplete(object, method, options = {})
+    limit = options[<span class="st">:limit</span>] || <span class="dv">10</span>
+    order = options[<span class="st">:order</span>] || <span class="st">&quot;</span><span class="ot">#{</span>method<span class="ot">}</span><span class="st"> ASC&quot;</span>
+
+    define_method(<span class="st">&quot;autocomplete_</span><span class="ot">#{</span>object<span class="ot">}</span><span class="st">_</span><span class="ot">#{</span>method<span class="ot">}</span><span class="st">&quot;</span>) <span class="kw">do</span>
+      <span class="kw">unless</span> params[<span class="st">:term</span>] &amp;&amp; params[<span class="st">:term</span>].empty?
+        items = object.to_s.camelize.constantize.where([<span class="st">&quot;LOWER(</span><span class="ot">#{</span>method<span class="ot">}</span><span class="st">) LIKE ?&quot;</span>, <span class="st">&quot;</span><span class="ot">#{</span>(options[<span class="st">:full</span>] ? <span class="st">'%'</span> : <span class="st">''</span>)<span class="ot">}#{</span>params[<span class="st">:term</span>].downcase<span class="ot">}</span><span class="st">%&quot;</span>]).limit(limit).order(order)
+      <span class="kw">else</span>
+        items = {}
+      <span class="kw">end</span>
+
+    render <span class="st">:json</span> =&gt; json_for_autocomplete(items, (options[<span class="st">:display_value</span>] ? options[<span class="st">:display_value</span>] : method))
+  <span class="kw">end</span>
+<span class="kw">end</span>
+
+<span class="kw">def</span> json_for_autocomplete(items, method)
+  items.collect {|i| {<span class="st">&quot;id&quot;</span> =&gt; i.id, <span class="st">&quot;label&quot;</span> =&gt; i.send(method), <span class="st">&quot;value&quot;</span> =&gt; i.send(method)}}
+<span class="kw">end</span></code></pre>
+<p>I changed removed the limit and order since we can just do that through the chaining of criteria that mongoid provides and I also change the json_for_autocomplete…</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="kw">module</span> <span class="dt">ClassMethods</span>
+  <span class="kw">def</span> autocomplete(object, method, options = {})
+
+    define_method(<span class="st">&quot;autocomplete_</span><span class="ot">#{</span>object<span class="ot">}</span><span class="st">_</span><span class="ot">#{</span>method<span class="ot">}</span><span class="st">&quot;</span>) <span class="kw">do</span>
+      <span class="kw">unless</span> params[<span class="st">:term</span>] &amp;&amp; params[<span class="st">:term</span>].empty?
+        items = <span class="dt">Category</span>.where(<span class="st">&quot;this.name.match(/</span><span class="ot">#{</span>params[<span class="st">:term</span>]<span class="ot">}</span><span class="st">/i)&quot;</span>).limit(<span class="dv">10</span>).asc(method)
+      <span class="kw">else</span>
+        items = {}
+      <span class="kw">end</span>
+
+    render <span class="st">:json</span> =&gt; json_for_autocomplete(items, method)
+  <span class="kw">end</span>
+<span class="kw">end</span>
+
+<span class="kw">def</span> json_for_autocomplete(items, method)
+  items.collect {|i| {<span class="st">&quot;id&quot;</span> =&gt; <span class="st">&quot;</span><span class="ot">#{</span>i.id<span class="ot">}</span><span class="st">&quot;</span>, <span class="st">&quot;label&quot;</span> =&gt; <span class="st">&quot;</span><span class="ot">#{</span>i.name<span class="ot">}</span><span class="st">&quot;</span>, <span class="st">&quot;value&quot;</span> =&gt; <span class="st">&quot;</span><span class="ot">#{</span>i.name<span class="ot">}</span><span class="st">&quot;</span>}}
+<span class="kw">end</span></code></pre>
+    </article>
+    <section>
+      <ul>
+        <li class="previous-page"><a href="/2010/01/08/mongodb-and-mongomapper-greatness" title="Previous post: MongoDB And MongoMapper Greatness" rel="prev">MongoDB And MongoMapper Greatness</a></li>
+        <li class="next-page"><a href="/2010/10/03/manage-users-with-devise-and-cancan" title="Next post: Manage Users With Devise And CanCan" rel="next">Manage Users With Devise And CanCan</a></li>
+      </ul>
+    </section>
+    <footer>
+      <span><a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/">Copyleft</a> 2014 Brandon Martin</span> ·
+      <span>Powered by <a href="http://jaspervdj.be/hakyll">Hakyll</a></span> ·
+      <!--<span><a href="https://github.com/ruud-v-a/ruudvanasseldonk.com">SourceVd</a></span>-->
+    </footer>
+  </body>
+</html>
+
